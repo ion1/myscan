@@ -1,0 +1,36 @@
+#!/bin/sh
+set -e
+
+if [ "$#" -ne 1 ]; then
+  >&2 printf 'USAGE: %s output.pdf\n' "$0"
+  exit 1
+fi
+
+mymktemp() {
+  mktemp --tmpdir myscan.XXXXXXXXXX
+}
+
+res=600
+
+tempfiles=
+trap 'rm -f $tempfiles' 0 1 2 13 15
+
+scan="$(mymktemp)"
+tempfiles="${tempfiles:+$tempfiles }$scan"
+scanimage -p --compression=None --resolution="$res" --mode=Gray >"$scan"
+
+contrast="$(mymktemp)"
+tempfiles="${tempfiles:+$tempfiles }$contrast"
+convert -verbose "pnm:$scan" -level 20%,80% "pnm:$contrast"
+
+unpaper="$(mymktemp)"
+tempfiles="${tempfiles:+$tempfiles }$unpaper"
+unpaper --dpi "$res" --post-size a4 --overwrite -v "$contrast" "$unpaper"
+
+pdf="$(mymktemp)"
+tempfiles="${tempfiles:+$tempfiles }$pdf"
+convert -verbose -density "$res" "pnm:$unpaper" "pdf:$pdf"
+
+mv -f "$pdf" "$1"
+
+# vi:set et sw=2 sts=2:
