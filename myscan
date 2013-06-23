@@ -23,6 +23,15 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
+programs_exist=true
+for f in mktemp scanimage convert unpaper; do
+  if ! >/dev/null 2>&1 type "$f"; then
+    >&2 printf "Missing program: %s\n" "$f"
+    programs_exist=false
+  fi
+done
+"$programs_exist"
+
 mymktemp() {
   mktemp --tmpdir myscan.XXXXXXXXXX
 }
