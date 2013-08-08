@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=myscan
+Comment=Scan documents to PDF files
+Exec=myscan
+Icon=scanner
+Terminal=false
+Type=Application
+StartupNotify=false
+Categories=Graphics;Scanning;

@@ -16,15 +16,10 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-set -e
-
-if [ "$#" -ne 1 ]; then
-  >&2 printf 'USAGE: %s output.pdf\n' "$0"
-  exit 1
-fi
+set -eu
 
 programs_exist=true
-for f in mktemp scanimage convert unpaper; do
+for f in zenity scanimage gawk convert unpaper pdftk; do
   if ! >/dev/null 2>&1 type "$f"; then
     >&2 printf "Missing program: %s\n" "$f"
     programs_exist=false
@@ -32,33 +27,90 @@ for f in mktemp scanimage convert unpaper; do
 done
 "$programs_exist"
 
-mymktemp() {
-  mktemp --tmpdir myscan.XXXXXXXXXX
-}
-
 res=300
+res_low=100
+mode=Color
 
-tempfiles=
-trap 'rm -f $tempfiles' 0 1 2 13 15
+dir="$(xdg-user-dir DOCUMENTS 2>/dev/null || :)"
+dir="${dir:-$HOME}"
 
-scan="$(mymktemp)"
-tempfiles="${tempfiles:+$tempfiles }$scan"
-scanimage -p --compression=None --resolution="$res" --mode=Color >"$scan"
+if [ "$#" -gt 0 ]; then
+  output_file="$1"
+else
+  output_file="$dir/scan-$(date +%Y%m%d-%H%M%S).pdf"
+  output_file="$(
+    zenity --file-selection --save --confirm-overwrite \
+           --title="Scan to" --filename="$output_file" \
+           --file-filter="*.pdf"
+  )"
+fi
 
-contrast="$(mymktemp)"
-tempfiles="${tempfiles:+$tempfiles }$contrast"
-convert -verbose "pnm:$scan" -level 20%,80% "pnm:$contrast"
+case "$output_file" in
+  "") exit ;;
+  *.[Pp][Dd][Ff]) ;;
+  *) output_file="$output_file.pdf" ;;
+esac
 
-unpaper="$(mymktemp)"
-tempfiles="${tempfiles:+$tempfiles }$unpaper"
-unpaper --dpi "$res" --post-size a4 \
-        --no-noisefilter --no-blurfilter --no-grayfilter --no-deskew \
-        --overwrite -v "$contrast" "$unpaper"
+base="${output_file%.[Pp][Dd][Ff]}"
 
-pdf="$(mymktemp)"
-tempfiles="${tempfiles:+$tempfiles }$pdf"
-convert -verbose -density "$res" "pnm:$unpaper" "pdf:$pdf"
+output_low_file="$base.low.pdf"
 
-mv -f "$pdf" "$1"
+temp_dir="$base.temp"
+mkdir "$temp_dir"
+trap 'rm -fr "$temp_dir"' 0 1 2 13 15
+
+page=0
+more_pages=true
+pages_file="$temp_dir/pages"
+pages_low_file="$temp_dir/pages.low"
+
+while "$more_pages"; do
+  page="$(($page+1))"
+
+  scan_pnm="$temp_dir/$page.scan.pnm"
+  contrast_pnm="$temp_dir/$page.contrast.pnm"
+  unpaper_pnm="$temp_dir/$page.unpaper.pnm"
+  scan_pdf="$temp_dir/$page.processed.pdf"
+  scan_low_pdf="$temp_dir/$page.processed.low.pdf"
+
+  >>"$pages_file"     printf "%s\n" "$scan_pdf"
+  >>"$pages_low_file" printf "%s\n" "$scan_low_pdf"
+
+  scanimage --resolution "$res" --mode "$mode" \
+            --compression None --progress 2>&1 >"$scan_pnm" | \
+    gawk 'BEGIN { RS="[\r\n]" }
+          match($0, /^Progress: ([0-9]+\.[0-9]+)%$/, m) {
+            print m[1]; fflush()
+          }' | \
+    zenity --progress --text="Scanning page $page" --auto-close --no-cancel
+
+  (
+    convert -verbose "$scan_pnm" -level "20%,80%" "$contrast_pnm"
+    rm -f "$scan_pnm"
+    unpaper --dpi "$res" --no-noisefilter --no-blurfilter --no-grayfilter \
+            --no-deskew --overwrite -v "$contrast_pnm" "$unpaper_pnm"
+    rm -f "$contrast_pnm"
+    convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
+            -compress Zip "$scan_pdf"
+    convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
+            -resample "$res_low" -density "$res_low" \
+            -compress JPEG -quality '75%' "$scan_low_pdf"
+    rm -f "$unpaper_pnm"
+  ) &
+
+  if ! zenity --question --text="Scan another page to the same document?"; then
+    more_pages=false
+  fi
+done
+
+wait
+
+xargs -a "$pages_file" -d "\n" -x \
+  sh -euc 'o="$1"; shift; pdftk "$@" output "$o"' -- "$output_file"
+
+xargs -a "$pages_low_file" -d "\n" -x \
+  sh -euc 'o="$1"; shift; pdftk "$@" output "$o"' -- "$output_low_file"
+
+</dev/null >/dev/null 2>&1 setsid xdg-open "$output_file" &
 
 # vi:set et sw=2 sts=2:
