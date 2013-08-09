@@ -21,7 +21,7 @@ set -eu
 set -o pipefail  # bashism
 
 programs_exist=true
-for f in zenity scanimage gawk convert unpaper pdftk; do
+for f in mktemp zenity scanimage gawk convert unpaper pdftk; do
   if ! >/dev/null 2>&1 type "$f"; then
     >&2 printf "Missing program: %s\n" "$f"
     programs_exist=false
@@ -57,8 +57,7 @@ base="${output_file%.[Pp][Dd][Ff]}"
 
 output_low_file="$base.low.pdf"
 
-temp_dir="$base.temp"
-mkdir "$temp_dir"
+temp_dir="$(mktemp -d "$base.temp-XXXXXXXXXX")"
 
 log_file="$temp_dir/myscan-log.txt"
 exec >"$log_file" 2>&1
