@@ -141,11 +141,19 @@ while "$more_pages"; do
             --no-noisefilter --no-blurfilter --no-grayfilter --no-deskew \
             --overwrite -v "$contrast_pnm" "$unpaper_pnm"
     rm -f "$contrast_pnm"
+
+    subchildren=
     convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
-            -compress Zip "$scan_pdf"
+            -compress Zip "$scan_pdf" &
+    subchildren="${subchildren:+$subchildren }$!"
     convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
             -resample "$res_low" -density "$res_low" \
-            -compress JPEG -quality '75%' "$scan_low_pdf"
+            -compress JPEG -quality '75%' "$scan_low_pdf" &
+    subchildren="${subchildren:+$subchildren }$!"
+    for c in $subchildren; do
+      wait "$c"
+    done
+
     rm -f "$unpaper_pnm"
   ) &
   children="${children:+$children }$!"
