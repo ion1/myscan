@@ -47,7 +47,25 @@ set -u
 
 res=300
 res_low=100
+border_l_mil=0
+border_t_mil=0
+border_r_mil=0
+border_b_mil=0
+sheet_size=a4
 mode=Color
+
+config_file="${XDG_CONFIG_HOME:-$HOME/.config}/myscan/myscan.conf"
+if [ -e "$config_file" ]; then
+  . "$config_file"
+else
+  mkdir -p "${config_file%/*}"
+  touch "$config_file"
+fi
+
+border="$(($border_l_mil*$res/1000))"
+border="$border,$(($border_t_mil*$res/1000))"
+border="$border,$(($border_r_mil*$res/1000))"
+border="$border,$(($border_b_mil*$res/1000))"
 
 dir="$(xdg-user-dir DOCUMENTS 2>/dev/null || :)"
 dir="${dir:-$HOME}"
@@ -119,8 +137,9 @@ while "$more_pages"; do
   (
     convert -verbose "$scan_pnm" -level "20%,80%" "$contrast_pnm"
     rm -f "$scan_pnm"
-    unpaper --dpi "$res" --no-noisefilter --no-blurfilter --no-grayfilter \
-            --no-deskew --overwrite -v "$contrast_pnm" "$unpaper_pnm"
+    unpaper --dpi "$res" --pre-border "$border" --sheet-size "$sheet_size" \
+            --no-noisefilter --no-blurfilter --no-grayfilter --no-deskew \
+            --overwrite -v "$contrast_pnm" "$unpaper_pnm"
     rm -f "$contrast_pnm"
     convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
             -compress Zip "$scan_pdf"
