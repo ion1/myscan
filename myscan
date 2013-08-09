@@ -20,6 +20,15 @@ set -eu
 
 set -o pipefail  # bashism
 
+for arg; do
+  case "$arg" in
+    -*)
+      >&2 printf "USAGE: %s [FILENAME.pdf]\n" "$0"
+      exit 1
+      ;;
+  esac
+done
+
 programs_exist=true
 for f in mktemp zenity scanimage gawk convert unpaper pdftk; do
   if ! >/dev/null 2>&1 type "$f"; then
