@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # myscan – a simple document scanner
 #
@@ -17,6 +17,8 @@
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 set -eu
+
+set -o pipefail  # bashism
 
 programs_exist=true
 for f in zenity scanimage gawk convert unpaper pdftk; do
@@ -57,12 +59,23 @@ output_low_file="$base.low.pdf"
 
 temp_dir="$base.temp"
 mkdir "$temp_dir"
-trap 'rm -fr "$temp_dir"' 0 1 2 13 15
+
+log_file="$temp_dir/myscan-log.txt"
+exec >"$log_file" 2>&1
+trap 'if [ "$?" != 0 ] && [ -e "$log_file" ]; then
+        zenity --error --text="Sorry, scanning failed. Opening log." || :
+        gedit --wait "$log_file" || :
+      fi
+      rm -fr "$temp_dir"
+     ' 0 1 2 13 15
+set -x
 
 page=0
 more_pages=true
 pages_file="$temp_dir/pages"
 pages_low_file="$temp_dir/pages.low"
+
+children=
 
 while "$more_pages"; do
   page="$(($page+1))"
@@ -81,7 +94,9 @@ while "$more_pages"; do
     gawk 'BEGIN { RS="[\r\n]" }
           match($0, /^Progress: ([0-9]+\.[0-9]+)%$/, m) {
             print m[1]; fflush()
-          }' | \
+          }
+          { print $0 >"/dev/stderr" }
+         ' | \
     zenity --progress --text="Scanning page $page" --auto-close --no-cancel
 
   (
@@ -97,13 +112,16 @@ while "$more_pages"; do
             -compress JPEG -quality '75%' "$scan_low_pdf"
     rm -f "$unpaper_pnm"
   ) &
+  children="${children:+$children }$!"
 
   if ! zenity --question --text="Scan another page to the same document?"; then
     more_pages=false
   fi
 done
 
-wait
+for c in $children; do
+  wait "$c"
+done
 
 xargs -a "$pages_file" -d "\n" -x \
   sh -euc 'o="$1"; shift; pdftk "$@" output "$o"' -- "$output_file"
