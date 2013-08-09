@@ -20,6 +20,9 @@ set -eu
 
 set -o pipefail  # bashism
 
+TEXTDOMAIN=myscan
+export TEXTDOMAIN
+
 for arg; do
   case "$arg" in
     -*)
@@ -30,13 +33,17 @@ for arg; do
 done
 
 programs_exist=true
-for f in mktemp zenity scanimage gawk convert unpaper pdftk; do
+for f in gettext.sh mktemp zenity scanimage gawk convert unpaper pdftk; do
   if ! >/dev/null 2>&1 type "$f"; then
     >&2 printf "Missing program: %s\n" "$f"
     programs_exist=false
   fi
 done
 "$programs_exist"
+
+set +u
+. gettext.sh
+set -u
 
 res=300
 res_low=100
@@ -51,7 +58,7 @@ else
   output_file="$dir/scan-$(date +%Y%m%d-%H%M%S).pdf"
   output_file="$(
     zenity --file-selection --save --confirm-overwrite \
-           --title="Scan to" --filename="$output_file" \
+           --title="$(gettext 'Scan to file')" --filename="$output_file" \
            --file-filter="*.pdf"
   )"
 fi
@@ -71,7 +78,8 @@ temp_dir="$(mktemp -d "$base.temp-XXXXXXXXXX")"
 log_file="$temp_dir/myscan-log.txt"
 exec >"$log_file" 2>&1
 trap 'if [ "$?" != 0 ] && [ -e "$log_file" ]; then
-        zenity --error --text="Sorry, scanning failed. Opening log." || :
+        zenity --error \
+               --text="$(gettext "Sorry, scanning failed. Opening log.")" || :
         gedit --wait "$log_file" || :
       fi
       rm -fr "$temp_dir"
@@ -97,8 +105,8 @@ while "$more_pages"; do
   >>"$pages_file"     printf "%s\n" "$scan_pdf"
   >>"$pages_low_file" printf "%s\n" "$scan_low_pdf"
 
-  scanimage --resolution "$res" --mode "$mode" \
-            --compression None --progress 2>&1 >"$scan_pnm" | \
+  LC_ALL=C scanimage --resolution "$res" --mode "$mode" \
+                     --compression None --progress 2>&1 >"$scan_pnm" | \
     (
       gawk 'BEGIN { RS="[\r\n]" }
             match($0, /^Progress: ([0-9]+\.[0-9]+)%$/, m) {
@@ -106,7 +114,8 @@ while "$more_pages"; do
             }
             { print $0 >"/dev/stderr" }
            ' | \
-      zenity --progress --text="Scanning page $page" --auto-close --no-cancel
+      zenity --progress --text="$(eval_gettext 'Scanning page $page')" \
+             --auto-close --no-cancel
     ) || :
 
   (
@@ -124,7 +133,9 @@ while "$more_pages"; do
   ) &
   children="${children:+$children }$!"
 
-  if ! zenity --question --text="Scan another page to the same document?"; then
+  if ! zenity --question \
+              --text="$(gettext 'Scan another page to the same document?')"
+  then
     more_pages=false
   fi
 done

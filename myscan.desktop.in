@@ -1,6 +1,6 @@
 [Desktop Entry]
-Name=myscan
-Comment=Scan documents to PDF files
+_Name=myscan
+_Comment=Scan documents to PDF files
 Exec=myscan
 Icon=scanner
 Terminal=false
