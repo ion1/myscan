@@ -76,10 +76,10 @@ output_low_file="$base.low.pdf"
 temp_dir="$(mktemp -d "$base.temp-XXXXXXXXXX")"
 
 log_file="$temp_dir/myscan-log.txt"
+error_msg="$(gettext 'Sorry, scanning failed. Opening log file.')"
 exec >"$log_file" 2>&1
 trap 'if [ "$?" != 0 ] && [ -e "$log_file" ]; then
-        zenity --error \
-               --text="$(gettext "Sorry, scanning failed. Opening log.")" || :
+        zenity --error --text="$error_msg" || :
         gedit --wait "$log_file" || :
       fi
       rm -fr "$temp_dir"
