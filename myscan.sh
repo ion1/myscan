@@ -107,16 +107,14 @@ while "$more_pages"; do
 
   LC_ALL=C scanimage --resolution "$res" --mode "$mode" \
                      --compression None --progress 2>&1 >"$scan_pnm" | \
-    (
-      gawk 'BEGIN { RS="[\r\n]" }
-            match($0, /^Progress: ([0-9]+\.[0-9]+)%$/, m) {
-              print m[1]; fflush()
-            }
-            { print $0 >"/dev/stderr" }
-           ' | \
-      zenity --progress --text="$(eval_gettext 'Scanning page $page')" \
-             --auto-close --no-cancel
-    ) || :
+    (gawk 'BEGIN { RS="[\r\n]" }
+           match($0, /^Progress: ([0-9]+\.[0-9]+)%$/, m) {
+             print m[1]; fflush()
+           }
+           { print $0 >"/dev/stderr" }
+          ' || :) | \
+    (zenity --progress --text="$(eval_gettext 'Scanning page $page')" \
+            --auto-close --no-cancel || :)
 
   (
     convert -verbose "$scan_pnm" -level "20%,80%" "$contrast_pnm"
