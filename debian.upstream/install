@@ -1,0 +1,3 @@
+build/locale usr/share
+build/myscan.desktop usr/share/applications
+build/myscan usr/bin
