@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: myscan 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-10 01:07+0300\n"
+"POT-Creation-Date: 2013-08-10 20:54+0300\n"
 "PO-Revision-Date: 2013-08-09 21:00+0200\n"
 "Last-Translator: Johan Kiviniemi <devel@johan.kiviniemi.name>\n"
 "Language-Team: \n"
@@ -24,19 +24,19 @@ msgstr "myscan"
 msgid "Scan documents to PDF files"
 msgstr "Skannaa dokumenttejä PDF-tiedostoihin"
 
-#: ../myscan.sh:79
+#: ../myscan.sh:69
 msgid "Scan to file"
 msgstr "Skannaa tiedostoon"
 
-#: ../myscan.sh:97
+#: ../myscan.sh:87
 msgid "Sorry, scanning failed. Opening log file."
 msgstr "Pahoittelen, skannaus epäonnistui. Avaan lokitiedoston."
 
-#: ../myscan.sh:134
+#: ../myscan.sh:123
 #, sh-format
 msgid "Scanning page $page"
 msgstr "Skannataan sivua $page"
 
-#: ../myscan.sh:162
+#: ../myscan.sh:155
 msgid "Scan another page to the same document?"
 msgstr "Skannaa uusi sivu samaan dokumenttiin?"

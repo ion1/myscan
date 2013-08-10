@@ -33,7 +33,7 @@ for arg; do
 done
 
 programs_exist=true
-for f in gettext.sh mktemp zenity scanimage gawk convert unpaper pdftk; do
+for f in gettext.sh mktemp zenity scanimage gawk convert pdftk; do
   if ! >/dev/null 2>&1 type "$f"; then
     >&2 printf "Missing program: %s\n" "$f"
     programs_exist=false
@@ -47,11 +47,6 @@ set -u
 
 res=300
 res_low=100
-border_l_mil=0
-border_t_mil=0
-border_r_mil=0
-border_b_mil=0
-sheet_size=a4
 mode=Color
 
 config_file="${XDG_CONFIG_HOME:-$HOME/.config}/myscan/myscan.conf"
@@ -61,11 +56,6 @@ else
   mkdir -p "${config_file%/*}"
   touch "$config_file"
 fi
-
-border="$(($border_l_mil*$res/1000))"
-border="$border,$(($border_t_mil*$res/1000))"
-border="$border,$(($border_r_mil*$res/1000))"
-border="$border,$(($border_b_mil*$res/1000))"
 
 dir="$(xdg-user-dir DOCUMENTS 2>/dev/null || :)"
 dir="${dir:-$HOME}"
@@ -114,11 +104,10 @@ children=
 while "$more_pages"; do
   page="$(($page+1))"
 
-  scan_pnm="$temp_dir/$page.scan.pnm"
-  contrast_pnm="$temp_dir/$page.contrast.pnm"
-  unpaper_pnm="$temp_dir/$page.unpaper.pnm"
-  scan_pdf="$temp_dir/$page.processed.pdf"
-  scan_low_pdf="$temp_dir/$page.processed.low.pdf"
+  scan_pnm="$temp_dir/page$page.0scan.pnm"
+  processed_png="$temp_dir/page$page.1processed.png"
+  scan_pdf="$temp_dir/page$page.2processed.pdf"
+  scan_low_pdf="$temp_dir/page$page.2processed.low.pdf"
 
   >>"$pages_file"     printf "%s\n" "$scan_pdf"
   >>"$pages_low_file" printf "%s\n" "$scan_low_pdf"
@@ -135,18 +124,22 @@ while "$more_pages"; do
             --auto-close --no-cancel || :)
 
   (
-    convert -verbose "$scan_pnm" -level "20%,80%" "$contrast_pnm"
+    convert -verbose "$scan_pnm" \
+            -level "20%,80%" \
+            -bordercolor black -compose Copy -border 20 -compose Over \
+            -fuzz "10%" -fill none -draw "matte 10,10 floodfill" \
+            -channel A -blur 0x1 -threshold "0%" +channel \
+            -background white -flatten \
+            -background white -deskew "40%" \
+            -fuzz "10%" -trim \
+            +repage "$processed_png"
     rm -f "$scan_pnm"
-    unpaper --dpi "$res" --pre-border "$border" --sheet-size "$sheet_size" \
-            --no-noisefilter --no-blurfilter --no-grayfilter --no-deskew \
-            --overwrite -v "$contrast_pnm" "$unpaper_pnm"
-    rm -f "$contrast_pnm"
 
     subchildren=
-    convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
+    convert -verbose -units PixelsPerInch -density "$res" "$processed_png" \
             -compress Zip "$scan_pdf" &
     subchildren="${subchildren:+$subchildren }$!"
-    convert -verbose -units PixelsPerInch -density "$res" "$unpaper_pnm" \
+    convert -verbose -units PixelsPerInch -density "$res" "$processed_png" \
             -resample "$res_low" -density "$res_low" \
             -compress JPEG -quality '75%' "$scan_low_pdf" &
     subchildren="${subchildren:+$subchildren }$!"
@@ -154,7 +147,7 @@ while "$more_pages"; do
       wait "$c"
     done
 
-    rm -f "$unpaper_pnm"
+    rm -f "$processed_png"
   ) &
   children="${children:+$children }$!"
 

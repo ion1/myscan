@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-10 01:10+0300\n"
+"POT-Creation-Date: 2013-08-10 20:54+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,19 +25,19 @@ msgstr ""
 msgid "Scan documents to PDF files"
 msgstr ""
 
-#: ../myscan.sh:79
+#: ../myscan.sh:69
 msgid "Scan to file"
 msgstr ""
 
-#: ../myscan.sh:97
+#: ../myscan.sh:87
 msgid "Sorry, scanning failed. Opening log file."
 msgstr ""
 
-#: ../myscan.sh:134
+#: ../myscan.sh:123
 #, sh-format
 msgid "Scanning page $page"
 msgstr ""
 
-#: ../myscan.sh:162
+#: ../myscan.sh:155
 msgid "Scan another page to the same document?"
 msgstr ""
