@@ -47,6 +47,7 @@ set -u
 
 res=300
 res_low=100
+margin_mm=3
 mode=Color
 
 config_file="${XDG_CONFIG_HOME:-$HOME/.config}/myscan/myscan.conf"
@@ -56,6 +57,10 @@ else
   mkdir -p "${config_file%/*}"
   touch "$config_file"
 fi
+
+# 1000000 microinch = 25.4 mm
+mm_to_microinch=39370
+margin="$(($margin_mm*$mm_to_microinch*$res/1000000))"
 
 dir="$(xdg-user-dir DOCUMENTS 2>/dev/null || :)"
 dir="${dir:-$HOME}"
@@ -106,8 +111,10 @@ while "$more_pages"; do
 
   scan_pnm="$temp_dir/page$page.0scan.pnm"
   processed_png="$temp_dir/page$page.1processed.png"
-  scan_pdf="$temp_dir/page$page.2processed.pdf"
-  scan_low_pdf="$temp_dir/page$page.2processed.low.pdf"
+  trimmed_info="$temp_dir/page$page.2trimmed.info"
+  trimmed_png="$temp_dir/page$page.2trimmed.png"
+  scan_pdf="$temp_dir/page$page.pdf"
+  scan_low_pdf="$temp_dir/page$page.low.pdf"
 
   >>"$pages_file"     printf "%s\n" "$scan_pdf"
   >>"$pages_low_file" printf "%s\n" "$scan_low_pdf"
@@ -126,20 +133,43 @@ while "$more_pages"; do
   (
     convert -verbose "$scan_pnm" \
             -level "20%,80%" \
-            -bordercolor black -compose Copy -border 20 -compose Over \
-            -fuzz "10%" -fill none -draw "matte 10,10 floodfill" \
-            -channel A -blur 0x1 -threshold "0%" +channel \
+            -bordercolor black -compose Copy -border 10 -compose Over \
+            -fuzz "10%" -fill none -draw "matte 5,5 floodfill" \
+            -channel A -blur 0x3 -threshold "0%" +channel \
+            -shave 10x10 \
             -background white -flatten \
-            -background white -deskew "40%" \
-            -fuzz "10%" -trim \
-            +repage "$processed_png"
+            -background white +deskew \
+            +repage \
+            '(' +clone \
+                -format 'worig=%[fx:w]; horig=%[fx:h]' \
+                -write info:"$trimmed_info.0" \
+                -blur 0x"$(($res/25))" -threshold '99%' -fuzz "0" -trim \
+                -format 'w=%[fx:w]; h=%[fx:h]; x=%[fx:page.x]; y=%[fx:page.y]' \
+                -write info:"$trimmed_info.1" \
+                +delete \
+            ')' \
+            "$processed_png"
     rm -f "$scan_pnm"
 
+    . "$trimmed_info.0"
+    . "$trimmed_info.1"
+    xnew="$(($x-$margin))"; if [ "$xnew" -lt 0 ]; then xnew=0; fi
+    ynew="$(($y-$margin))"; if [ "$ynew" -lt 0 ]; then ynew=0; fi
+    wnew="$(($w+2*$margin))"
+    hnew="$(($h+2*$margin))"
+    if [ "$(($xnew+$wnew))" -gt "$worig" ]; then wnew="$((worig-$xnew))"; fi
+    if [ "$(($ynew+$hnew))" -gt "$horig" ]; then hnew="$((horig-$ynew))"; fi
+
+    convert -verbose "$processed_png" \
+            -crop "$wnew"x"$hnew"+"$xnew"+"$ynew" +repage \
+            "$trimmed_png"
+    rm -f "$processed_png"
+
     subchildren=
-    convert -verbose -units PixelsPerInch -density "$res" "$processed_png" \
+    convert -verbose -units PixelsPerInch -density "$res" "$trimmed_png" \
             -compress Zip "$scan_pdf" &
     subchildren="${subchildren:+$subchildren }$!"
-    convert -verbose -units PixelsPerInch -density "$res" "$processed_png" \
+    convert -verbose -units PixelsPerInch -density "$res" "$trimmed_png" \
             -resample "$res_low" -density "$res_low" \
             -compress JPEG -quality '75%' "$scan_low_pdf" &
     subchildren="${subchildren:+$subchildren }$!"
