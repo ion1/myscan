@@ -188,6 +188,10 @@ while "$more_pages"; do
   fi
 done
 
+</dev/null zenity --progress --text="$(gettext 'Processing document')" \
+                  --auto-close --pulsate --no-cancel &
+zenity_pid="$!"
+
 for c in $children; do
   wait "$c"
 done
@@ -197,6 +201,8 @@ xargs -a "$pages_file" -d "\n" -x \
 
 xargs -a "$pages_low_file" -d "\n" -x \
   sh -euc 'o="$1"; shift; pdftk "$@" output "$o"' -- "$output_low_file"
+
+kill "$zenity_pid" || :
 
 </dev/null >/dev/null 2>&1 setsid xdg-open "$output_file" &
 

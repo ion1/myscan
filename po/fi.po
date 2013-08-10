@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: myscan 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2013-08-11 00:12+0300\n"
-"PO-Revision-Date: 2013-08-09 21:00+0200\n"
+"POT-Creation-Date: 2013-08-11 00:40+0300\n"
+"PO-Revision-Date: 2013-08-11 00:41+0200\n"
 "Last-Translator: Johan Kiviniemi <devel@johan.kiviniemi.name>\n"
 "Language-Team: \n"
 "Language: fi\n"
@@ -40,3 +40,8 @@ msgstr "Skannataan sivua $page"
 #: ../myscan.sh:185
 msgid "Scan another page to the same document?"
 msgstr "Skannaa uusi sivu samaan dokumenttiin?"
+
+#: ../myscan.sh:191
+msgid "Processing document"
+msgstr "Käsitellään dokumenttia"
+
