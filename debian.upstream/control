@@ -2,7 +2,7 @@ Source: myscan
 Section: utils
 Priority: optional
 Maintainer: Johan Kiviniemi <debian@johan.kiviniemi.name>
-Build-Depends: debhelper (>= 8.0.0)
+Build-Depends: debhelper (>= 8.0.0), intltool
 Standards-Version: 3.9.4
 Homepage: https://github.com/ion1/myscan
 Vcs-Git: https://github.com/ion1/myscan.git
@@ -10,7 +10,7 @@ Vcs-Browser: https://github.com/ion1/myscan
 
 Package: myscan
 Architecture: all
-Depends: zenity, sane-utils, gawk, imagemagick, pdftk, ${misc:Depends}
+Depends: gettext-base, zenity, sane-utils, gawk, imagemagick, pdftk, ${misc:Depends}
 Suggests: gedit
 Description: Simple document scanner
  Scan documents into PDF files with a minimal amount of mouse clicks, applying
