@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+ppa="ppa:ion/myscan"
+export DEBFULLNAME="Johan Kiviniemi"
+export DEBEMAIL="debian@johan.kiviniemi.name"
+export DEBSIGN_KEYID=529ACA94FE094CBE2DCF97BF9D75D9F4EAFDB760
+
+make locale
+
+git status
+git clean -xdn
+printf 'Proceed? (^C to abort) '; read _
+git clean -xdf
+
+cp -a debian.upstream debian
+
+pkg="$(dpkg-parsechangelog | sed -nre 's/^Source: (.*)$/\1/p')"
+ver="$(dpkg-parsechangelog | sed -nre 's/^Version: (.*)$/\1/p')"
+[ -n "$ver" ]
+ver="$ver~$(date +%Y%m%d%H%M)~ppa0"
+
+dch -b -v "$ver" "PPA build."
+dch -r ""
+
+debuild -S -sa -k"$DEBSIGN_KEYID"
+
+dput -f "$ppa" ../"$pkg"_"$ver"_source.changes
